@@ -1,0 +1,130 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: token('color.background.neutral.subtle'); color: token('color.foreground.neutral.default'); }
+
+.page { display: flex; flex-direction: column; gap: token('spacing.lg'); padding: token('spacing.lg') token('spacing.xl') token('spacing.2xl'); max-width: 1600px; margin: 0 auto; }
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: token('spacing.md'); }
+.page-header h1, .page-header p { margin: 0; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: token('spacing.sm'); }
+.toolbar > * { min-width: 160px; }
+.toolbar > *:first-child { flex: 1 1 260px; }
+
+.stat-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: token('spacing.md'); }
+.stat-body { display: flex; align-items: flex-end; justify-content: space-between; gap: token('spacing.sm'); }
+
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: token('spacing.md'); }
+.col-8 { grid-column: span 8; }
+.col-4 { grid-column: span 4; }
+.col-12 { grid-column: span 12; }
+.stack { display: flex; flex-direction: column; gap: token('spacing.md'); }
+@media (max-width: 1100px) {
+  .col-8, .col-4 { grid-column: span 12; }
+  .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Commit graph */
+.graph-legend { display: flex; flex-wrap: wrap; gap: token('spacing.md'); margin-bottom: token('spacing.sm'); }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.graph-body { position: relative; }
+.graph-rails { position: absolute; left: 0; top: 0; }
+.graph-rows { list-style: none; margin: 0; padding: 0; position: relative; }
+.graph-day { position: absolute; left: 0; right: 0; }
+.graph-row { position: absolute; left: 0; right: 0; }
+.graph-card {
+  display: flex; align-items: center; gap: token('spacing.sm'); width: 100%; text-align: left;
+  padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit; color: inherit;
+  background: token('color.background.neutral.surface');
+  border: 1px solid token('color.border.neutral.subtle');
+  transition: border-color 120ms, box-shadow 120ms, transform 120ms;
+}
+.graph-card:hover, .graph-card:focus-visible { border-color: token('color.border.accent.default'); box-shadow: token('shadow.low.down'); transform: translateX(2px); outline: none; }
+.graph-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.graph-main > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.graph-meta { display: flex; gap: 6px; align-items: baseline; }
+.graph-tags { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; flex: none; max-width: 45%; }
+.deployed-pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+  background: token('color.background.success.subtle'); border: 1px solid token('color.border.success.subtle');
+  color: token('color.foreground.success.default');
+}
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 32px; height: 32px; border-radius: 50%; font-size: 12px; font-weight: 600;
+  background: token('color.background.accent.subtle'); color: token('color.foreground.accent.default');
+  border: 1px solid token('color.border.accent.subtle');
+}
+.avatar-sm { width: 22px; height: 22px; font-size: 10px; }
+
+/* Calendar */
+.calendar { overflow-x: auto; }
+.cal-cell { cursor: pointer; outline: none; }
+.cal-cell:hover, .cal-cell:focus-visible { stroke: token('color.border.accent.default'); stroke-width: 1.5px; }
+.cal-sel { stroke: token('color.foreground.neutral.default'); stroke-width: 1.5px; }
+.legend-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+
+/* Drift / authors / footprint */
+.drift-legend, .legend-list { list-style: none; margin: token('spacing.sm') 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.drift-legend li, .legend-list li { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Drawer */
+.drawer-body { display: flex; flex-direction: column; gap: token('spacing.md'); }
+.drawer-meta { display: flex; align-items: center; gap: token('spacing.sm'); }
+.drawer-meta > div { flex: 1; }
+.drawer-tags, .drawer-files { display: flex; flex-wrap: wrap; gap: 4px; }
+.diff { display: flex; flex-direction: column; gap: token('spacing.sm'); }
+.diff-counts { display: inline-flex; gap: 6px; }
+.diff-table { width: 100%; border-collapse: collapse; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; }
+.diff-table td { padding: 0 8px; vertical-align: top; white-space: pre-wrap; word-break: break-all; }
+.diff-num { width: 1%; text-align: right; color: token('color.foreground.subtle'); user-select: none; }
+.diff-sign { display: inline-block; width: 12px; color: token('color.foreground.subtle'); user-select: none; }
+.diff-hunk td { background: token('color.background.info.subtle'); color: token('color.foreground.info.default'); }
+.diff-insert td { background: token('color.background.success.subtle'); }
+.diff-delete td { background: token('color.background.danger.subtle'); }
+
+/* Layout corrections */
+.page-header > div { display: flex; flex-direction: column; gap: 4px; }
+.toolbar > * { flex: 0 1 220px; min-width: 180px; }
+.toolbar > *:first-child { flex: 1 1 320px; }
+.toolbar > *:last-child { flex: none; }
+.stat-body > div { display: flex; flex-direction: column; gap: 2px; }
+.graph-meta > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.graph-day { pointer-events: none; }
+
+/* ---- VisiCore brand layer over Capra --------------------------------------
+   Capra tokens own every structural color. The VisiCore cobalt is the one brand
+   exception (visicore-theme skill: accent #0054A3 light / #0075FF dark), used only
+   for focal roles: title eyebrow, stat rules, sparkline, "you" emphasis, avatars. */
+:root {
+  --vct-accent: #0054A3;
+  --vct-accent-surface: #EFF6FF;
+  --vct-accent-ink: #FFFFFF;
+}
+body.dark {
+  --vct-accent: #0075FF;
+  --vct-accent-surface: #17345C;
+  --vct-accent-ink: #FFFFFF;
+}
+.page { font-variant-numeric: tabular-nums; }
+.brand-row { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 28px; height: 28px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vct-accent); }
+.eyebrow::before { content: ''; width: 18px; height: 2px; background: var(--vct-accent); border-radius: 1px; }
+.stat-card { position: relative; overflow: hidden; border-radius: 8px; }
+.stat-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--vct-accent); }
+.avatar { background: var(--vct-accent-surface); color: var(--vct-accent); border-color: transparent; }
+.sparkline-line { stroke: var(--vct-accent); }
+.sparkline-dot { fill: var(--vct-accent); }
+.sparkline-area { fill: var(--vct-accent); }
+.emph { --series: var(--vct-accent); }
+.graph-card:hover, .graph-card:focus-visible { border-color: var(--vct-accent); }
+.cal-sel { stroke: var(--vct-accent); stroke-width: 2px; }
+.footer-note { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+
+/* Single-spine timeline */
+.spine { stroke: token('color.border.neutral.default'); stroke-width: 2px; stroke-linecap: round; }
+.node-core { fill: token('color.background.neutral.surface'); }
+.graph-card { border-left: 4px solid var(--series); }
+.graph-card-deployed { background: token('color.background.success.subtle'); border-color: token('color.border.success.subtle'); border-left-color: var(--series); }
+.group-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: token('color.background.neutral.default'); color: token('color.foreground.neutral.default'); }
+.group-chip .swatch { width: 8px; height: 8px; border-radius: 50%; }
+.drawer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
