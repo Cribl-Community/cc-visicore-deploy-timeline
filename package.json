@@ -32,7 +32,7 @@
   },
   "displayName": "Deployment Timeline",
   "description": "GitHub-style commit and deploy history across all Worker Groups and Fleets, with inline diffs and deploy-lag indicators.",
-  "author": "VisiCore Tech - Jacob Evans",
+  "author": "VisiCore Tech - CriblPacks@VisiCoreTech.com",
   "minLogStreamVersion": "4.20.0",
   "cribl": {
     "type": "app",
@@ -43,5 +43,24 @@
       "stream",
       "edge"
     ]
-  }
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/Cribl-Community/cc-jevans#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cribl-Community/cc-jevans.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cribl-Community/cc-jevans/issues"
+  },
+  "keywords": [
+    "cribl",
+    "cribl-app",
+    "cribl-stream",
+    "cribl-edge",
+    "deployment",
+    "git",
+    "version-control",
+    "timeline"
+  ]
 }
