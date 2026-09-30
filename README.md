@@ -4,8 +4,6 @@
 
 ## About This App
 
-![Deployment Timeline in Cribl.Cloud: time scale, stat tiles, commit timeline, and side panels](docs/overview.png)
-
 Cribl keeps a Git history of every configuration change, but the built-in view shows one Worker Group at a time and
 gives no picture of the gap between what is committed and what is running. Deployment Timeline reads that history for
 every Worker Group and Edge Fleet at once and shows it on one time axis, with the same deploy, revert, and commit
