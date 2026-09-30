@@ -1,0 +1,24 @@
+# Product API access declaration. Read-only: the app only lists Worker Groups / Fleets
+# and reads their Git commit history and diffs. No write methods are requested.
+policies:
+  - object: '/master/groups'
+    actions: ['GET']
+  - object: '/master/groups/*'
+    actions: ['GET']
+  - object: '/m/:gid/version'
+    actions: ['GET']
+  - object: '/m/:gid/version/*'
+    actions: ['GET']
+  # Version awareness: leader build version and the Cribl version each connected node runs.
+  - object: '/system/info'
+    actions: ['GET']
+  - object: '/master/workers'
+    actions: ['GET']
+  # Actions mirrored from Cribl's own commit history view. Each is behind an explicit
+  # confirmation naming the commit and group; nothing runs automatically.
+  - object: '/master/groups/:id/deploy'
+    actions: ['PATCH']
+  - object: '/m/:gid/version/commit'
+    actions: ['POST']
+  - object: '/m/:gid/version/revert'
+    actions: ['POST']

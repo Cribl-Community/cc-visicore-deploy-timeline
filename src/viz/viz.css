@@ -1,0 +1,55 @@
+/* Series slots: fill/stroke via Capra tokens so light and dark both work. */
+.s0 { --series: token('color.foreground.neutral.default'); }
+.s1 { --series: token('visualization.consistent.Indigo'); }
+.s2 { --series: token('visualization.consistent.Orange'); }
+.s3 { --series: token('visualization.consistent.Jade'); }
+.s4 { --series: token('visualization.consistent.Plum'); }
+.s5 { --series: token('visualization.consistent.Red'); }
+.s6 { --series: token('visualization.consistent.Cyan'); }
+
+.fill { fill: var(--series); }
+.stroke { stroke: var(--series); fill: none; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--series); flex: none; }
+
+/* Sequential Blues for the calendar (steps 5-8 validated ordinal on both surfaces). */
+.h0 { fill: token('color.background.neutral.default'); }
+.h1 { fill: token('visualization.sequential.Blues.5'); }
+.h2 { fill: token('visualization.sequential.Blues.6'); }
+.h3 { fill: token('visualization.sequential.Blues.7'); }
+.h4 { fill: token('visualization.sequential.Blues.8'); }
+
+/* Status (with icon + label in the DOM, never color alone). */
+.st-success { --series: token('color.background.success.solid.default'); }
+.st-warning { --series: token('color.background.warning.solid.default'); }
+.st-danger { --series: token('color.background.danger.solid.default'); }
+.st-neutral { --series: token('color.background.neutral.solid.default'); }
+
+.surface-ring { stroke: token('color.background.neutral.surface'); stroke-width: 2px; }
+.grid-line { stroke: token('color.border.neutral.subtle'); stroke-width: 1px; }
+.axis-text { fill: token('color.foreground.subtle'); font: 11px/1 inherit; }
+.value-text { fill: token('color.foreground.neutral.default'); font: 12px/1 inherit; }
+.value-text-strong { fill: token('color.foreground.neutral.default'); font: 600 12px/1 inherit; }
+.hit { fill: transparent; cursor: pointer; }
+.hit:hover + .fill, .hit:focus-visible + .fill { filter: brightness(1.15); }
+.rail { stroke: var(--series); stroke-width: 2px; stroke-linecap: round; }
+.rail-pending { stroke: var(--series); stroke-width: 2px; stroke-dasharray: 3 4; stroke-linecap: round; }
+.sparkline-area { fill: token('color.background.accent.solid.default'); opacity: 0.1; }
+.sparkline-line { stroke: token('color.background.accent.solid.default'); stroke-width: 2px; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.sparkline-dot { fill: token('color.background.accent.solid.default'); }
+.emph { --series: token('color.background.accent.solid.default'); }
+.deemph { --series: token('color.background.neutral.solid.default'); opacity: 0.55; }
+
+.viz-tip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 50;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: token('color.background.neutral.solid.default');
+  color: token('color.foreground.neutral.contrast');
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: token('shadow.medium.down');
+  white-space: nowrap;
+}
+.value-text-onfill { fill: token('brand.base.white'); font: 600 12px/1 inherit; }
