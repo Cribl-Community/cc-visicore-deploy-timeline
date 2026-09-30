@@ -9,7 +9,9 @@ const LABEL: Record<Area, string> = {
 };
 
 /** Part-to-whole stacked bar of changed files by config area. Fixed slot order, 2px surface gaps. */
-export function ChangeFootprint({ counts, loading }: { counts: Record<Area, number>; loading?: boolean }) {
+type Props = { counts: Record<Area, number>; loading?: boolean; selectedArea?: Area; onSelectArea: (a: Area | undefined) => void };
+
+export function ChangeFootprint({ counts, loading, selectedArea, onSelectArea }: Props) {
   const { tip, show, hide } = useTip();
   const total = AREAS.reduce((n, a) => n + counts[a], 0);
   const width = 400;
@@ -28,7 +30,9 @@ export function ChangeFootprint({ counts, loading }: { counts: Record<Area, numb
         {segs.map((s, i) => (
           <g key={s.a} className={`s${s.slot}`}>
             <rect className="fill" x={s.x + (i ? 1 : 0)} y={0} width={Math.max(0, s.w - (i ? 1 : 0) - (i < segs.length - 1 ? 1 : 0))} height={H} rx={i === 0 || i === segs.length - 1 ? 4 : 0} />
-            <rect className="hit" x={s.x} y={0} width={s.w} height={H}
+            <rect className="hit" x={s.x} y={0} width={s.w} height={H} tabIndex={0}
+              onClick={() => onSelectArea(selectedArea === s.a ? undefined : s.a)}
+              onKeyDown={(e) => e.key === 'Enter' && onSelectArea(selectedArea === s.a ? undefined : s.a)}
               onMouseMove={(e) => show(e, <><b>{LABEL[s.a]}</b> · {counts[s.a]} file{counts[s.a] === 1 ? '' : 's'} · {Math.round((counts[s.a] / total) * 100)}%</>)}
               onMouseLeave={hide} />
             {biggest === s && s.w > 60 && (
@@ -39,8 +43,8 @@ export function ChangeFootprint({ counts, loading }: { counts: Record<Area, numb
       </svg>
       <ul className="legend-list">
         {AREAS.map((a, i) => counts[a] > 0 && (
-          <li key={a} className={`s${i === AREAS.length - 1 ? 0 : i + 1}`}>
-            <span className="swatch" />
+          <li key={a} className={`s${i === AREAS.length - 1 ? 0 : i + 1}${selectedArea && selectedArea !== a ? ' deemph' : ''}`}>
+            <button type="button" className="linkish" title="Filter commits touching this area" onClick={() => onSelectArea(selectedArea === a ? undefined : a)}><span className="swatch" /></button>
             <Text variant="body-xs-normal" color="secondary">{LABEL[a]}</Text>
             <Text variant="body-xs-semibold">{counts[a]}</Text>
           </li>

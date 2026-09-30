@@ -128,3 +128,18 @@ body.dark {
 .group-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: token('color.background.neutral.default'); color: token('color.foreground.neutral.default'); }
 .group-chip .swatch { width: 8px; height: 8px; border-radius: 50%; }
 .drawer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+/* Actionable values */
+.stat-link { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: none; }
+.stat-link:hover .stat-action, .stat-link:focus-visible .stat-action { text-decoration: underline; }
+.stat-action { margin-top: 4px; }
+.linkish { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: none; }
+.linkish:hover, .linkish:focus-visible { text-decoration: underline; text-decoration-color: var(--vct-accent); }
+.group-chip { border: 0; cursor: pointer; font: inherit; }
+.group-chip:hover { outline: 1px solid var(--vct-accent); }
+.deployed-pill { cursor: pointer; }
+
+/* Grid children must be allowed to shrink, or a wide table pushes the next column. */
+.grid > * { min-width: 0; }
+.col-8, .col-4, .col-12 { min-width: 0; }
+.table-wrap { width: 100%; overflow-x: auto; }

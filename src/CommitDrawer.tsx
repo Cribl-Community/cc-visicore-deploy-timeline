@@ -36,14 +36,14 @@ export function CommitDrawer({ commit, groups, onClose, onChanged }: Props) {
               <Text as="div" variant="body-sm-semibold">{commit.author_name || 'unknown'}</Text>
               <Text as="div" variant="body-xs-normal" color="tertiary">{commit.author_email} · {new Date(commit.time).toLocaleString()}</Text>
             </div>
-            <Text variant="code" color="secondary">{commit.hash.slice(0, 12)}</Text>
+            <button type="button" className="linkish" title="Copy full hash" onClick={() => { navigator.clipboard?.writeText(commit.hash).catch(() => undefined); }}><Text variant="code" color="secondary">{commit.hash.slice(0, 12)}</Text></button>
           </div>
           {commit.body && <Text as="pre" variant="body-sm-normal" color="secondary">{commit.body}</Text>}
           <div className="drawer-tags">
             {commit.deployedTo.map((gid) => (
               <span key={gid} className="deployed-pill"><RocketLaunch size="sm" /><Text variant="body-xs-semibold" color="success">Deployed · {byId.get(gid)?.name ?? gid}</Text></span>
             ))}
-            {commit.groups.map((gid) => <Tag key={gid} size="sm">{byId.get(gid)?.name ?? gid}</Tag>)}
+            {commit.groups.map((gid) => <a key={gid} className="linkish" href={`/m/${encodeURIComponent(gid)}`} target="_top" rel="noreferrer" title="Open this group in Cribl"><Tag size="sm">{byId.get(gid)?.name ?? gid}</Tag></a>)}
             {commit.refs && <Tag size="sm" color="highlight">{commit.refs}</Tag>}
           </div>
           {!data && <Skeleton active paragraph={{ rows: 6 }} />}

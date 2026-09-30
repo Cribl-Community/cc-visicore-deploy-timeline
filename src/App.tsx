@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Text, TextField, SelectField, ToggleButtonGroup, Skeleton, EmptyState, Alert, Card, Table, defineColumns, Button } from '@capra/core';
 import { SearchOutlined, ReloadOutlined } from '@capra/icons';
 import { listGroups, listCommits, changedFiles, groupConfigVersion, systemInfo, listWorkers, type WorkerEntry, kvGet, kvSet, type ConfigGroup, type GitLogEntry, type CriblUser } from './api';
-import { mergeCommits, groupStates, dailySeries, commitsPerDay, authorCounts, footprint, dayKey, versionStates, type Commit, type Area } from './model';
+import { mergeCommits, groupStates, dailySeries, commitsPerDay, authorCounts, footprint, dayKey, versionStates, areaOf, type Commit, type Area } from './model';
 import { StatTiles } from './viz/StatTiles';
 import { CommitGraph } from './viz/CommitGraph';
 import { ActivityCalendar } from './viz/ActivityCalendar';
@@ -12,7 +12,7 @@ import { Authors } from './viz/Authors';
 import { CommitDrawer } from './CommitDrawer';
 import './viz/viz.css';
 
-type Filters = { group?: string; author?: string; day?: string; range: string; text: string; view: 'graph' | 'table' };
+type Filters = { group?: string; author?: string; day?: string; area?: Area; range: string; text: string; view: 'graph' | 'table' };
 const DEFAULT_FILTERS: Filters = { range: '90', text: '', view: 'graph' };
 const RANGES = [
   { id: '7', label: 'Last 7 days' }, { id: '30', label: 'Last 30 days' }, { id: '90', label: 'Last 90 days' },
@@ -29,6 +29,9 @@ export default function App() {
   const [open, setOpen] = useState<Commit | null>(null);
   const [fileCache, setFileCache] = useState<Record<string, string[]>>({});
   const [reloadKey, setReloadKey] = useState(0);
+  const driftRef = useRef<HTMLDivElement>(null);
+  const authorsRef = useRef<HTMLDivElement>(null);
+  const jump = (r: React.RefObject<HTMLDivElement | null>) => r.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -88,9 +91,10 @@ export default function App() {
       (!filters.group || c.groups.includes(filters.group)) &&
       (!filters.author || c.author_name === filters.author) &&
       (!filters.day || dayKey(c.time) === filters.day) &&
+      (!filters.area || (fileCache[c.hash] ?? []).some((p) => areaOf(p) === filters.area)) &&
       (!q || c.message.toLowerCase().includes(q) || (c.body ?? '').toLowerCase().includes(q) || c.hash.startsWith(q) || (c.author_name ?? '').toLowerCase().includes(q)),
     );
-  }, [all, filters, now]);
+  }, [all, filters, now, fileCache]);
 
   // Footprint needs changed-file lists; fetch lazily for the visible commits (bounded).
   useEffect(() => {
@@ -152,8 +156,8 @@ export default function App() {
         <ToggleButtonGroup aria-label="View" selectedKeys={[filters.view]} disallowEmptySelection
           onSelectionChange={(keys) => update({ view: ([...keys][0] as Filters['view']) ?? 'graph' })}
           items={[{ key: 'graph', text: 'Graph' }, { key: 'table', text: 'Table' }]} />
-        {(filters.day || filters.group || filters.author || filters.text) && (
-          <Button variant="tertiary" onClick={() => update({ day: undefined, group: undefined, author: undefined, text: '' })}>Clear filters</Button>
+        {(filters.day || filters.group || filters.author || filters.area || filters.text) && (
+          <Button variant="tertiary" onClick={() => update({ day: undefined, group: undefined, author: undefined, area: undefined, text: '' })}>Clear filters</Button>
         )}
       </div>
 
@@ -162,34 +166,34 @@ export default function App() {
       {data && (
         <>
           <StatTiles stats={[
-            { label: 'Commits, last 7 days', value: last7, hint: `${all.length} total`, spark },
-            { label: 'Active authors', value: authorNames.length },
-            { label: 'Groups behind deploy', value: lagging, hint: `${states.length} groups & fleets` },
-            { label: 'Uncommitted changes', value: uncommitted },
-            { label: 'Leader version', value: data.leaderVersion ?? '—', hint: versionIssues ? `${versionIssues} group${versionIssues === 1 ? '' : 's'} not on leader version` : 'All nodes match the leader' },
+            { label: 'Commits, last 7 days', value: last7, hint: `${all.length} total`, spark, action: 'Show last 7 days', onClick: () => update({ range: '7', day: undefined }) },
+            { label: 'Active authors', value: authorNames.length, action: 'See who', onClick: () => jump(authorsRef) },
+            { label: 'Groups behind deploy', value: lagging, hint: `${states.length} groups & fleets`, action: lagging ? 'Focus first lagging group' : 'See drift', onClick: () => { const g = states.find((s) => s.lag !== 0); if (g) update({ group: g.id }); jump(driftRef); } },
+            { label: 'Uncommitted changes', value: uncommitted, action: 'Open Worker Groups in Cribl', href: '/groups' },
+            { label: 'Leader version', value: data.leaderVersion ?? '—', hint: versionIssues ? `${versionIssues} group${versionIssues === 1 ? '' : 's'} not on leader version` : 'All nodes match the leader', action: 'Open Cribl diagnostics', href: '/settings/diagnostics' },
           ]} />
 
           <div className="grid">
             <Card className="col-8">
-              <Card.Header><Card.Title>Commit graph</Card.Title><Card.Description>{`${visible.length} commit${visible.length === 1 ? '' : 's'}${filters.day ? ` on ${filters.day}` : ''}`}</Card.Description></Card.Header>
+              <Card.Header><Card.Title>Commit graph</Card.Title><Card.Description>{`${visible.length} commit${visible.length === 1 ? '' : 's'}${filters.day ? ` on ${filters.day}` : ''}${filters.area ? ` touching ${filters.area}` : ''}`}</Card.Description></Card.Header>
               <Card.Content>
                 {visible.length === 0
                   ? <EmptyState illustration="EmptyFolder" title="No commits match" description="Widen the time range or clear a filter." size="md" />
                   : filters.view === 'graph'
-                    ? <CommitGraph commits={visible} groups={states} order={data.order} onOpen={setOpen} now={now} />
-                    : <Table items={rows} columns={columns} visibleColumns={['when', 'message', 'author', 'groups', 'deployed']} density="compact" appearance="zebra" />}
+                    ? <CommitGraph commits={visible} groups={states} order={data.order} onOpen={setOpen} now={now} onFilter={(f) => update(f)} />
+                    : <div className="table-wrap"><Table items={rows} columns={columns} visibleColumns={['when', 'message', 'author', 'groups', 'deployed']} density="compact" appearance="zebra" /></div>}
               </Card.Content>
             </Card>
             <div className="col-4 stack">
-              <Card>
+              <Card ref={driftRef}>
                 <Card.Header><Card.Title>Deploy drift</Card.Title><Card.Description>Commits ahead of the deployed version</Card.Description></Card.Header>
                 <Card.Content><DeployDrift groups={states} versions={versions} leaderVersion={data.leaderVersion} order={data.order} selectedGroup={filters.group} onSelectGroup={(g) => update({ group: g })} onChanged={reload} /></Card.Content>
               </Card>
               <Card>
                 <Card.Header><Card.Title>Change footprint</Card.Title><Card.Description>Files changed by config area</Card.Description></Card.Header>
-                <Card.Content><ChangeFootprint counts={foot as Record<Area, number>} loading={footLoading} /></Card.Content>
+                <Card.Content><ChangeFootprint counts={foot as Record<Area, number>} loading={footLoading} selectedArea={filters.area} onSelectArea={(a) => update({ area: a })} /></Card.Content>
               </Card>
-              <Card>
+              <Card ref={authorsRef}>
                 <Card.Header><Card.Title>Authors</Card.Title><Card.Description>Commits per author in range</Card.Description></Card.Header>
                 <Card.Content><Authors authors={authors} me={me ? { email: me.email, name: [me.firstName, me.lastName].filter(Boolean).join(' ') || me.username } : undefined} selectedAuthor={filters.author} onSelectAuthor={(a) => update({ author: a })} /></Card.Content>
               </Card>

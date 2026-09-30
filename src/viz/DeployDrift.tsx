@@ -71,7 +71,7 @@ export function DeployDrift({ groups, versions = {}, leaderVersion, order, onCha
             <li key={g.id} className={st.cls}>
               <span className="swatch" />
               <st.Icon size="sm" />
-              <Text variant="body-xs-normal" color="secondary">{g.name}: {st.label}</Text>
+              <a className="linkish" href={`/m/${encodeURIComponent(g.id)}`} target="_top" rel="noreferrer" title="Open this group in Cribl"><Text variant="body-xs-normal" color="secondary">{g.name}: {st.label}</Text></a>
               {g.localChanges > 0 && <Pill appearance="info" variant="muted" inline>{`${g.localChanges} uncommitted`}</Pill>}
               {versionPill(versions[g.id], leaderVersion)}
               <CommitPendingButton group={g} onDone={onChanged} />

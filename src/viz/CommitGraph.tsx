@@ -12,6 +12,7 @@ type Props = {
   groups: GroupState[];
   order: string[];
   onOpen: (c: Commit) => void;
+  onFilter: (f: { group?: string; author?: string }) => void;
   now: number;
 };
 
@@ -25,7 +26,8 @@ const RAIL_W = 48;
  * colored edge and chip name the group; commits that are currently deployed get a larger
  * rocket node on the spine. Readable without knowing git.
  */
-export function CommitGraph({ commits, groups, order, onOpen, now }: Props) {
+export function CommitGraph({ commits, groups, order, onOpen, onFilter, now }: Props) {
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   const { tip, show, hide } = useTip();
   const byId = new Map(groups.map((g) => [g.id, g]));
   const rows: { c: Commit; y: number; dayLabel?: string }[] = [];
@@ -84,10 +86,12 @@ export function CommitGraph({ commits, groups, order, onOpen, now }: Props) {
                   </li>
                 )}
                 <li className="graph-row" style={{ top: y - ROW / 2 + 6 }}>
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     className={`graph-card s${slotFor(gid, order)}${deployed ? ' graph-card-deployed' : ''}`}
                     onClick={() => onOpen(c)}
+                    onKeyDown={(e) => e.key === 'Enter' && onOpen(c)}
                     onMouseMove={(e) => show(e, <>{c.hash.slice(0, 12)} · {new Date(c.time).toLocaleString()} · click for diff</>)}
                     onMouseLeave={hide}
                   >
@@ -95,24 +99,24 @@ export function CommitGraph({ commits, groups, order, onOpen, now }: Props) {
                     <span className="graph-main">
                       <Text as="span" variant="body-md-semibold">{c.message || '(no message)'}</Text>
                       <span className="graph-meta">
-                        <Text variant="body-xs-normal" color="secondary">{c.author_name || 'unknown'}</Text>
+                        <button type="button" className="linkish" onClick={(e) => { stop(e); onFilter({ author: c.author_name }); }} title="Filter by this author"><Text variant="body-xs-normal" color="secondary">{c.author_name || 'unknown'}</Text></button>
                         <Text variant="body-xs-normal" color="tertiary">· {relativeTime(c.time, now)}</Text>
                         <Text variant="code" color="tertiary">{c.short}</Text>
                       </span>
                     </span>
                     <span className="graph-tags">
                       {deployed && (
-                        <span className="deployed-pill">
+                        <span className="deployed-pill" role="button" tabIndex={0} title="Filter to this group" onClick={(e) => { stop(e); onFilter({ group: c.deployedTo[0] }); }} onKeyDown={(e) => { if (e.key === 'Enter') { stop(e); onFilter({ group: c.deployedTo[0] }); } }}>
                           <RocketLaunch size="sm" />
                           <Text variant="body-xs-semibold" color="success">Live on {c.deployedTo.map((g) => byId.get(g)?.name ?? g).join(', ')}</Text>
                         </span>
                       )}
                       {isVersionChange(c) && <Tag size="sm" color="highlight">Version change</Tag>}
                       {c.groups.map((g) => (
-                        <span key={g} className={`group-chip s${slotFor(g, order)}`}><span className="swatch" />{byId.get(g)?.name ?? g}</span>
+                        <button key={g} type="button" className={`group-chip s${slotFor(g, order)}`} title="Filter to this group" onClick={(e) => { stop(e); onFilter({ group: g }); }}><span className="swatch" />{byId.get(g)?.name ?? g}</button>
                       ))}
                     </span>
-                  </button>
+                  </div>
                 </li>
               </Fragment>
             );
