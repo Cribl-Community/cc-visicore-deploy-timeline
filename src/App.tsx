@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer, Switch, Text, TextField, SelectField, ToggleButtonGroup, Skeleton, EmptyState, Alert, Card, Table, defineColumns, Button } from '@capra/core';
 import { SearchOutlined, ReloadOutlined } from '@capra/icons';
-import { listGroups, listCommits, changedFiles, firstGroup, pLimit, groupConfigVersion, systemInfo, listWorkers, type WorkerEntry, kvGet, kvSet, type ConfigGroup, type GitLogEntry, type CriblUser } from './api';
+import { listGroups, listAllCommits, changedFiles, firstGroup, pLimit, groupConfigVersion, systemInfo, listWorkers, type WorkerEntry, kvGet, kvSet, type ConfigGroup, type GitLogEntry, type CriblUser } from './api';
 import { displayAuthor, mergeCommits, groupStates, dailySeries, commitsPerDay, authorCounts, footprint, dayKey, versionStates, areaOf, type Commit, type Area } from './model';
 import { StatTiles } from './viz/StatTiles';
 import { kindLabel } from './model';
@@ -24,7 +24,7 @@ const RANGES = [
   { id: '90', label: '90d', long: 'Last 90 days' }, { id: '365', label: '1y', long: 'Last year' }, { id: 'all', label: 'All', long: 'All time' },
 ];
 
-type Loaded = { groups: ConfigGroup[]; logs: Record<string, GitLogEntry[]>; order: string[]; leaderVersion?: string; workers: WorkerEntry[] };
+type Loaded = { groups: ConfigGroup[]; logs: Record<string, GitLogEntry[]>; order: string[]; leaderVersion?: string; workers: WorkerEntry[]; groupErrors: Record<string, string> };
 
 export default function App() {
   const [data, setData] = useState<Loaded | null>(null);
@@ -42,7 +42,7 @@ export default function App() {
 
   useEffect(() => {
     window.getCriblUser?.().then(setMe).catch(() => undefined);
-    kvGet<Partial<Filters>>('ui/filters').then((f) => f && setFilters((cur) => ({ ...cur, ...f, day: undefined }))).catch(() => undefined);
+    kvGet<Partial<Filters>>('ui/filters').then((f) => f && setFilters((cur) => ({ ...cur, ...f, day: undefined, area: undefined }))).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -53,18 +53,19 @@ export default function App() {
         const leaderVersion = typeof info?.BUILD?.VERSION === 'string' ? (info.BUILD.VERSION as string) : undefined;
         const groups = (await listGroups()).filter((g) => !g.isSearch && g.type !== 'search' && g.type !== 'local_search' && g.type !== 'lake_access');
         const entries = await Promise.all(groups.map(async (g) => {
-          const [log, cv] = await Promise.all([
-            listCommits(g.id).catch(() => []),
+          const [logResult, cv] = await Promise.all([
+            listAllCommits(g.id).then((log) => ({ log, error: undefined as string | undefined })).catch((e) => ({ log: [] as GitLogEntry[], error: (e as Error).message })),
             g.configVersion ? Promise.resolve(g.configVersion) : groupConfigVersion(g.id).catch(() => undefined),
           ]);
           if (cv) g.configVersion = cv;
-          return [g.id, log] as const;
+          return [g.id, logResult] as const;
         }));
         if (!alive) return;
         // Color slots go to the most active groups; the rest share the neutral slot.
-        const logs = Object.fromEntries(entries);
+        const logs = Object.fromEntries(entries.map(([id, r]) => [id, r.log]));
+        const groupErrors = Object.fromEntries(entries.filter(([, r]) => r.error).map(([id, r]) => [id, r.error as string]));
         const order = [...groups].sort((a, b) => (logs[b.id]?.length ?? 0) - (logs[a.id]?.length ?? 0)).map((g) => g.id);
-        setData({ groups, logs, order, leaderVersion, workers });
+        setData({ groups, logs, order, leaderVersion, workers, groupErrors });
       } catch (e) {
         if (alive) setError((e as Error).message);
       }
@@ -90,28 +91,34 @@ export default function App() {
   const versionIssues = Object.values(versions).filter((v) => v.status === 'behind' || v.status === 'mixed' || v.status === 'ahead' || v.incompatible > 0).length;
 
   const since = useMemo(() => (filters.range === 'all' ? (all.length ? Math.min(...all.map((c) => c.time)) : now - 30 * 86_400_000) : now - Number(filters.range) * 86_400_000), [filters.range, all, now]);
-  const visible = useMemo(() => {
+  // Every filter except area — area needs each commit's changed-file list, which is fetched lazily below.
+  // Driving that fetch from the area-filtered result would deadlock: uncached commits never match the
+  // area predicate, so they'd never be selected for fetching.
+  const preArea = useMemo(() => {
     const q = filters.text.trim().toLowerCase();
     return all.filter((c) =>
       c.time >= since &&
       (!filters.group || c.groups.includes(filters.group)) &&
       (!filters.author || c.author_name === filters.author) &&
       (!filters.day || dayKey(c.time) === filters.day) &&
-      (!filters.area || (fileCache[c.hash] ?? []).some((p) => areaOf(p) === filters.area)) &&
       (!q || c.message.toLowerCase().includes(q) || (c.body ?? '').toLowerCase().includes(q) || c.hash.startsWith(q) || (c.author_name ?? '').toLowerCase().includes(q)),
     );
-  }, [all, filters, fileCache, since]);
+  }, [all, filters, since]);
+  const visible = useMemo(
+    () => preArea.filter((c) => !filters.area || (fileCache[c.hash] ?? []).some((p) => areaOf(p) === filters.area)),
+    [preArea, filters.area, fileCache],
+  );
 
-  // Footprint needs changed-file lists; fetch lazily for the visible commits (bounded).
+  // Footprint needs changed-file lists; fetch lazily for the pre-area-filtered commits (bounded).
   useEffect(() => {
-    const todo = visible.filter((c) => !fileCache[c.hash]).slice(0, 60);
+    const todo = preArea.filter((c) => !fileCache[c.hash]).slice(0, 60);
     if (todo.length === 0) return;
     let alive = true;
     const limit = pLimit(4);
     Promise.all(todo.map((c) => limit(() => firstGroup(c.groups, (g) => changedFiles(g, c.hash))).then((fs) => [c.hash, fs.map((f) => f.name)] as const).catch(() => [c.hash, []] as const)))
       .then((pairs) => alive && setFileCache((cur) => ({ ...cur, ...Object.fromEntries(pairs) })));
     return () => { alive = false; };
-  }, [visible, fileCache]);
+  }, [preArea, fileCache]);
 
   const foot = useMemo(() => {
     const paths = visible.flatMap((c) => fileCache[c.hash] ?? []);
@@ -123,7 +130,7 @@ export default function App() {
   const perDay = useMemo(() => commitsPerDay(all.filter((c) => (!filters.group || c.groups.includes(filters.group)) && (!filters.author || c.author_name === filters.author))), [all, filters.group, filters.author]);
   const spark = useMemo(() => dailySeries(all, 30, now).map((d) => d.count), [all, now]);
   const last7 = useMemo(() => all.filter((c) => c.time >= now - 7 * 86_400_000).length, [all, now]);
-  const lagging = states.filter((g) => g.lag !== 0).length;
+  const lagging = states.filter((g) => g.lag > 0).length;
   const uncommitted = states.reduce((n, g) => n + g.localChanges, 0);
   const authorNames = useMemo(() => [...new Map(all.filter((c) => c.author_name).map((c) => [c.author_name as string, displayAuthor(c.author_name)])).entries()].sort((a, b) => a[1].localeCompare(b[1])), [all]);
 
@@ -152,6 +159,11 @@ export default function App() {
       </header>
 
       {error && <Alert appearance="danger" title="Could not load history">{error}</Alert>}
+      {data && Object.keys(data.groupErrors).length > 0 && (
+        <Alert appearance="warning" title="Some groups failed to load commit history">
+          {Object.entries(data.groupErrors).map(([id, msg]) => `${data.groups.find((g) => g.id === id)?.name ?? id}: ${msg}`).join('; ')}
+        </Alert>
+      )}
 
       <div className="toolbar">
         <TextField aria-label="Search commits" placeholder="Search message, hash, author" leadingSlot={<SearchOutlined size="sm" />} value={filters.text} onChange={(v) => update({ text: v })} />
@@ -187,7 +199,7 @@ export default function App() {
           <StatTiles stats={[
             { label: 'Commits, last 7 days', value: last7, hint: `${all.length} total`, spark, action: 'Show last 7 days', onClick: () => update({ range: '7', day: undefined }) },
             { label: 'Active authors', value: authorNames.length, action: 'See who', onClick: () => jump(authorsRef) },
-            { label: 'Groups behind deploy', value: lagging, hint: `${states.length} groups & fleets`, action: lagging ? 'Focus first lagging group' : 'See drift', onClick: () => { const g = states.find((s) => s.lag !== 0); if (g) update({ group: g.id }); jump(driftRef); } },
+            { label: 'Groups behind deploy', value: lagging, hint: `${states.length} groups & fleets`, action: lagging ? 'Focus first lagging group' : 'See drift', onClick: () => { const g = states.find((s) => s.lag > 0); if (g) update({ group: g.id }); jump(driftRef); } },
             { label: 'Uncommitted changes', value: uncommitted, action: 'Open Worker Groups in Cribl', href: groupsListUrl() },
             { label: 'Leader version', value: data.leaderVersion ?? '—', hint: versionIssues ? `${versionIssues} group${versionIssues === 1 ? '' : 's'} not on leader version` : 'All nodes match the leader', action: 'Show version ladder', onClick: () => setLadderOpen(true) },
           ]} />
