@@ -1,9 +1,12 @@
-# Product API access declaration. Read-only: the app only lists Worker Groups / Fleets
-# and reads their Git commit history and diffs. No write methods are requested.
+# Product API access declaration. Lists Worker Groups / Fleets and reads their Git commit
+# history and diffs. Also grants, behind explicit user confirmation in the app: deploying
+# a committed version, committing pending changes, and reverting a commit.
 policies:
   - object: '/master/groups'
     actions: ['GET']
   - object: '/master/groups/*'
+    actions: ['GET']
+  - object: '/master/groups/:id/configVersion'
     actions: ['GET']
   - object: '/m/:gid/version'
     actions: ['GET']
