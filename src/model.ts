@@ -103,20 +103,21 @@ export function dailySeries(commits: Commit[], days: number, now = Date.now()): 
   return out;
 }
 
-export type AuthorCount = { name: string; email?: string; count: number; other?: boolean };
+/** `key` is the raw author_name/email, matching how commits are filtered; `name` is for display only. */
+export type AuthorCount = { key: string; name: string; email?: string; count: number; other?: boolean };
 
 export function authorCounts(commits: Commit[], top = 8): AuthorCount[] {
   const m = new Map<string, AuthorCount>();
   for (const c of commits) {
-    const key = displayAuthor(c.author_name || c.author_email);
-    const a = m.get(key) ?? { name: key, email: c.author_email, count: 0 };
+    const key = c.author_name || c.author_email || 'unknown';
+    const a = m.get(key) ?? { key, name: displayAuthor(key), email: c.author_email, count: 0 };
     a.count++;
     m.set(key, a);
   }
   const all = [...m.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   if (all.length <= top) return all;
   const rest = all.slice(top).reduce((n, a) => n + a.count, 0);
-  return [...all.slice(0, top), { name: 'Other', count: rest, other: true }];
+  return [...all.slice(0, top), { key: '__other__', name: 'Other', count: rest, other: true }];
 }
 
 export const AREAS = ['pipelines', 'routes', 'sources', 'destinations', 'packs', 'lookups', 'other'] as const;

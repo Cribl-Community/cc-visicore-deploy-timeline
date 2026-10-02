@@ -43,6 +43,13 @@ test('authorCounts folds the tail into Other', () => {
   assert.equal(a[1].count, 1);
 });
 
+test('authorCounts keys by raw author_name, not the display text, so selection matches commit filtering', () => {
+  const clientLogs = { default: [e('ccc0000', '2026-09-30 10:00:00 +0000', 'abc1234567890@clients')] };
+  const a = authorCounts(mergeCommits(clientLogs, []));
+  assert.equal(a[0].key, 'abc1234567890@clients');
+  assert.equal(a[0].name, 'API client · abc1234…');
+});
+
 test('footprint buckets config areas', () => {
   const f = footprint([
     'groups/default/local/cribl/pipelines/syslog/conf.yml',
