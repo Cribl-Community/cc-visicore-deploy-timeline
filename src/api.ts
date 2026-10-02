@@ -99,6 +99,16 @@ export const listCommits = (gid: string, limit = 200, offset = 0) =>
     `/m/${encodeURIComponent(gid)}/version?offset=${offset}&limit=${limit}`,
   ).then((r) => r.items ?? []);
 
+/** Pages through a group's full commit history; `listCommits` alone silently truncates at its limit. */
+export async function listAllCommits(gid: string, pageSize = 200): Promise<GitLogEntry[]> {
+  const out: GitLogEntry[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await listCommits(gid, pageSize, offset);
+    out.push(...page);
+    if (page.length < pageSize) return out;
+  }
+}
+
 export const showCommit = (gid: string, hash: string, diffLineLimit = 4000) =>
   get<Counted<GitShow>>(
     `/m/${encodeURIComponent(gid)}/version/show?commit=${hash}&diffLineLimit=${diffLineLimit}`,
